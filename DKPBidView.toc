@@ -1,0 +1,12 @@
+## Interface: 11304
+## Version: 0.0.1
+## Title: DKPBidView
+## Notes: Provides overview on what is going on during DKP bidding.
+## Author: ironsmile
+## SavedVariables: DKPBidView
+
+embeds.xml
+
+gui/dkp-frame.lua
+gui/dkp-row.lua
+main.lua
