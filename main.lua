@@ -213,7 +213,7 @@ local function showStatus()
 	if enabled then
 		print("dkpbv: enabled")
 	else
-		print("dkpbv: enabled")
+		print("dkpbv: disabled")
 	end
 
 	if bidInProgress then
