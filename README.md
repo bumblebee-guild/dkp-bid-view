@@ -15,7 +15,12 @@ Bidding is tracked by certain pattern matchers who are monitoring the raid chat.
 
 ## TODO
 
-[] Config screen
-[] Cancel button
-[] Bid button
-[] Showing the item for which the current bid is
+[ ] Config screen
+
+[ ] Cancel button
+
+[ ] Bid button
+
+[ ] Showing the item for which the current bid is
+
+[ ] Remember window position and size
