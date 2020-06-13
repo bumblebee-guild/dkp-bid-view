@@ -1,27 +1,15 @@
 local BID_STARTED_REGEXP = ">>>.* Enter your bid for.*Minimum BID is.*"
 local BID_ENDED_NOBID_REGEXP = "Bidding for.*finished.*"
-local BID_ENDED_WON_REGEXP = "%w+ won .* with %d+ DKP.*"
-local BID_ACCEPTED_REGEXP = "([%w-]+) %- Current bid: (%d+).*OK.*"
+local BID_ENDED_WON_REGEXP = "[%w-]+ won .* with %d+ DKP.*"
+local BID_ACCEPTED_REGEXP = "([%w-]+) %- Current bid: (%d+)%. OK!.*"
 local OFFICER_NOTE_DKP_REGEXP = "Net:%s*(%d+)"
 
 local listeningChats = {
 	"CHAT_MSG_RAID", -- raid chat
 	"CHAT_MSG_RAID_LEADER", -- raid leader chat
 	"CHAT_MSG_RAID_WARNING", -- raid warning
-	-- "CHAT_MSG_SAY", -- say (for testing)
+	"CHAT_MSG_SAY", -- say (for testing)
 }
-
--- Convert the chat names to a set which can be used for faster testing wheter
--- some channel belongs to the set or not.
-local listeningChatsSet = {}
-for _, eventID in ipairs(listeningChats) do
-	listeningChatsSet[eventID] = true;
-end
-
-local enabled = true
-local playerRealm = GetRealmName()
-local bidInProgress = false
-local currentBidders = {}
 
 -- getPlayerDKP finds the current player's DKP from the guild's officer note.
 local function getPlayerDKP()
@@ -49,19 +37,6 @@ local function getPlayerDKP()
 end
 
 local AceGUI = LibStub("AceGUI-3.0")
-
--- resetState returns the state of the addon to the initial position. That
--- is, there are no bids in progress and no current bidders.
-local function resetState()
-	bidInProgress = false
-	currentBidders = {}
-end
-
--- isChatEvent returns true if the event is part of the chat events we're listening
--- on for updates.
-local function isChatEvent(event)
-	return listeningChatsSet[event] == true;
-end
 
 local DKPWin = {
 	["Show"] = function(self)
@@ -123,18 +98,59 @@ local DKPWin = {
 	end
 }
 
-local function startBidding()
-	resetState();
-	bidInProgress = true;
+local DKPBidView = LibStub("AceAddon-3.0"):NewAddon("DKPBidView", "AceEvent-3.0")
+
+function DKPBidView:OnInitialize()
+	self.db = LibStub("AceDB-3.0"):New("DKPBidView")
+
+	self.enabled = true
+	self.playerRealm = GetRealmName()
+	self.bidInProgress = false
+	self.currentBidders = {}
+
+	for _, eventID in ipairs(listeningChats) do
+		self:RegisterEvent(eventID, self.HandleChatEvent, self)
+	end
+end
+
+function DKPBidView:HandleChatEvent(author, msg)
+	if not self.enabled then
+		return
+	end
+
+	if string.match(msg, BID_STARTED_REGEXP) then
+		self:StartBidding()
+		return
+	end
+
+	-- Bidding is not started yet. So there is no point trying to match
+	-- any of the rest of the events.
+	if not self.bidInProgress then
+		return
+	end
+
+	if string.match(msg, BID_ENDED_NOBID_REGEXP) or
+			string.match(msg, BID_ENDED_WON_REGEXP) then
+		self:EndBidding()
+	end
+
+	for player, bid in msg:gmatch(BID_ACCEPTED_REGEXP) do
+		self:AcceptBid(player, bid)
+	end
+end
+
+function DKPBidView:StartBidding()
+	self:ResetState();
+	self.bidInProgress = true;
 	DKPWin:Show();
 end
 
-local function endBidding()
-	resetState();
+function DKPBidView:EndBidding()
+	self:ResetState();
 	DKPWin:Hide();
 end
 
-local function acceptBid(player, bid)
+function DKPBidView:AcceptBid(player, bid)
 	if tonumber(bid) == nil then
 		print("Bid [" .. bid .. "] from " .. player .. " is not a number. Ignoring it.")
 		return
@@ -146,83 +162,54 @@ local function acceptBid(player, bid)
 	end
 
 	-- Remove the realm if present in the player name.
-	player = string.gsub(player, "-" .. playerRealm, "")
+	player = string.gsub(player, "-" .. self.playerRealm, "")
 
-	currentBidders[player] = bid
-	DKPWin:RefreshBidders(currentBidders)
+	self.currentBidders[player] = bid
+	DKPWin:RefreshBidders(self.currentBidders)
 end
 
-local function handleChatEvent(author, msg)
-	if string.match(msg, BID_STARTED_REGEXP) then
-		startBidding()
-		return
-	end
-
-	-- Bidding is not started yet. So there is no point trying to match
-	-- any of the rest of the events.
-	if not bidInProgress then
-		return
-	end
-
-	if string.match(msg, BID_ENDED_NOBID_REGEXP) or
-			string.match(msg, BID_ENDED_WON_REGEXP) then
-		endBidding()
-	end
-
-	for player, bid in msg:gmatch(BID_ACCEPTED_REGEXP) do
-		acceptBid(player, bid)
-	end
+-- ResetState returns the state of the addon to the initial position. That
+-- is, there are no bids in progress and no current bidders.
+function DKPBidView:ResetState()
+	self.bidInProgress = false
+	self.currentBidders = {}
 end
 
-local function eventDispatcher(self, event, arg1, arg2)
-	if not enabled then
+function DKPBidView:Enable()
+	if self.enabled then
 		return
 	end
 
-	-- Filter only chat events in the global event handlers. This leaves the door
-	-- open for registering other type of events in the future.
-	if isChatEvent(event) then
-		-- For all the chat events arg2 is the author and arg1 is the
-		-- acctual message.
-		handleChatEvent(arg2, arg1)
-	end
-end
-
-local function enable()
-	if enabled then
-		return
-	end
-
-	resetState();
-	enabled = true
+	self:ResetState();
+	self.enabled = true
 	print("dkpbv enabled")
 end
 
-local function disable()
-	if not enabled then
+function DKPBidView:Disable()
+	if not self.enabled then
 		return
 	end
 
 	DKPWin:Hide();
-	resetState();
-	enabled = false
+	self:ResetState();
+	self.enabled = false
 	print("dkpbv disabled. To enable it again write /dkpbv enable")
 end
 
-local function showStatus()
-	if enabled then
+function DKPBidView:ShowStatus()
+	if self.enabled then
 		print("dkpbv: enabled")
 	else
 		print("dkpbv: disabled")
 	end
 
-	if bidInProgress then
+	if self.bidInProgress then
 		print("dkpbv: currently bidding is in progress")
 	end
 end
 
-local function showHelp()
-	print("Possible commands: status, cancel, hide, enable, disable")
+function DKPBidView:ShowHelp()
+	print("Possible commands: status, cancel, hide, show, enable, disable")
 	print("Current matchers:")
 	print(" * bid started: " .. BID_STARTED_REGEXP)
 	print(" * bid accepted: " .. BID_ACCEPTED_REGEXP)
@@ -237,43 +224,37 @@ SLASH_DKPBIDVIEW1 = "/dkpbv"
 -- and stuff.
 local function dkpbvCli(arg)
 	if arg == "" or arg == "-h" then
-		showHelp()
+		DKPBidView:ShowHelp()
 		return
 	end
 
 	if arg == "cancel" or arg == "hide" then
-		endBidding()
+		DKPBidView:EndBidding()
 		return
 	end
 
 	if arg == "disable" then
-		disable()
+		DKPBidView:Disable()
 		return
 	end
 
 	if arg == "enable" then
-		enable()
+		DKPBidView:Enable()
 		return
 	end
 
 	if arg == "status" then
-		showStatus()
+		DKPBidView:ShowStatus()
+		return
+	end
+
+	if arg == "show" then
+		DKPBidView:StartBidding()
 		return
 	end
 
 	print("dkpbv: unknown command '" .. arg .. "'")
-	showHelp()
+	DKPBidView:ShowHelp()
 end
 
 SlashCmdList["DKPBIDVIEW"] = dkpbvCli
-
-DKPBidView = LibStub("AceAddon-3.0"):NewAddon("DKPBidView")
-
-function DKPBidView:OnInitialize()
-	resetState();
-	local listenFrame = CreateFrame("FRAME", "DKPBidViewListeningFrame");
-	for _, eventID in ipairs(listeningChats) do
-		listenFrame:RegisterEvent(eventID);
-	end
-	listenFrame:SetScript("OnEvent", eventDispatcher);
-end
