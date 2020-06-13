@@ -1,3 +1,4 @@
+-- Default values for the patter matches.
 local BID_STARTED_REGEXP = ">>>.* Enter your bid for.*Minimum BID is.*"
 local BID_ENDED_NOBID_REGEXP = "Bidding for.*finished.*"
 local BID_ENDED_WON_REGEXP = "[%w-]+ won .* with %d+ DKP.*"
@@ -11,31 +12,7 @@ local listeningChats = {
 	"CHAT_MSG_SAY", -- say (for testing)
 }
 
--- getPlayerDKP finds the current player's DKP from the guild's officer note.
-local function getPlayerDKP()
-	guid = UnitGUID("player")
-	if guid == nil then
-		return "not in guild"
-	end
-
-	total, online, mobile = GetNumGuildMembers()
-
-	for i=1,total do
-		name, rankName, rankIndex, level, classDisplayName, zone, publicNote,
-		officerNote, isOnline, status, class, achievementPoints, achievementRank,
-		isMobile, canSoR, repStanding, memberGUID = GetGuildRosterInfo(i)
-		if memberGUID == guid then
-			local dkp = "unknown"
-			for net, total in officerNote:gmatch(OFFICER_NOTE_DKP_REGEXP) do
-				dkp = net
-			end
-			return dkp
-		end
-	end
-
-	return "unknown"
-end
-
+local DKPBidView = LibStub("AceAddon-3.0"):NewAddon("DKPBidView", "AceEvent-3.0")
 local AceGUI = LibStub("AceGUI-3.0")
 
 local DKPWin = {
@@ -51,7 +28,7 @@ local DKPWin = {
 		frame:SetPoint("RIGHT", -50, 0)
 
 		frame:SetTitle("DKP Bid View")
-		frame:SetStatusText("Your DKP: " .. getPlayerDKP())
+		frame:SetStatusText("Your DKP: " .. DKPBidView:GetPlayerDKP())
 		frame:SetLayout("List")
 
 		self.frame = frame
@@ -98,15 +75,171 @@ local DKPWin = {
 	end
 }
 
-local DKPBidView = LibStub("AceAddon-3.0"):NewAddon("DKPBidView", "AceEvent-3.0")
+function DKPBidView:GetOptions()
+	local opts = {
+		type = "group",
+		args = {
+			enable = {
+				name = "Enable",
+				desc = "Enables / disables the addon",
+				type = "toggle",
+				set = function(info,val) self.enabled = val end,
+				get = function(info) return self.enabled end
+			},
+			patterns={
+				name = "Patterns",
+				desc = "Patterns for matching bidding messages.",
+				type = "group",
+				args={
+					bidStarted = {
+						name = "Bid Started",
+						type = "input",
+						desc = "Pattern for matching bidding started chat messages.",
+						set = function(info, val) self.bidStartedRExp = val end,
+						get = function(info) return self.bidStartedRExp end,
+						multiline = 2,
+					},
+					bidEndedNoBid = {
+						name = "Bid Ended (no bids)",
+						type = "input",
+						desc = "Pattern for the chat message when bidding ended without any bids.",
+						set = function(info, val) self.bidEndedNoBidRExp = val end,
+						get = function(info) return self.bidEndedNoBidRExp end,
+						multiline = 2,
+					},
+					bidEndedWon = {
+						name = "Bid Won",
+						type = "input",
+						desc = "Pattern for the chat message when someone won an item after bidding.",
+						set = function(info, val) self.bidEndedWonRExp = val end,
+						get = function(info) return self.bidEndedWonRExp end,
+						multiline = 2,
+					},
+					bidAccepted = {
+						name = "Bid Accepted",
+						type = "input",
+						desc = "Pattern for the chat message when someone's bid has been accepted.",
+						set = function(info, val) self.bidAcceptedRExp = val end,
+						get = function(info) return self.bidAcceptedRExp end,
+						multiline = 2,
+					},
+				}
+			},
+			dkpExtract = {
+				name = "My DKP",
+				desc = "Configuration for obtaining player's DKP.",
+				type = "group",
+				args = {
+					dkpOfficerNote = {
+						name = "DKP From Officer Note",
+						type = "input",
+						desc = "This pattern should match one number. It is used against the player's officer note in their guild.",
+						set = function(info, val) self.officerNoteRExp = val end,
+						get = function(info) return self.officerNoteRExp end,
+						multiline = 2,
+					}
+				},
+			},
+			chats = {
+				name = "Chats",
+				desc = "Configure which chats this addon will read.",
+				type = "group",
+				args = {
+					raid = {
+						name = "Raid Chat",
+						type = "toggle",
+						desc = "Listen for bidding messages in the RAID chat (/raid).",
+						set = function(info, val) self.listenRaid = val end,
+						get = function(info) return self.listenRaid end,
+					},
+					raidLeader = {
+						name = "Raid Leader",
+						type = "toggle",
+						desc = "Listen for bidding messages from the raid leader.",
+						set = function(info, val) self.listenRaidLeader = val end,
+						get = function(info) return self.listenRaidLeader end,
+					},
+					raidWarning = {
+						name = "Raid Warnings",
+						type = "toggle",
+						desc = "Listen for bidding messages in the RAID WARNING chat (/rw).",
+						set = function(info, val) self.listenRaidWarning = val end,
+						get = function(info) return self.listenRaidWarning end,
+					},
+					party = {
+						name = "Party",
+						type = "toggle",
+						desc = "Listen for bidding messages in the party chat (/party).",
+						set = function(info, val) self.listenParty = val end,
+						get = function(info) return self.listenParty end,
+					},
+					partyLeader = {
+						name = "Party Leader",
+						type = "toggle",
+						desc = "Listen for bidding messages from the party leader.",
+						set = function(info, val) self.listenPartyLeader = val end,
+						get = function(info) return self.listenPartyLeader end,
+					},
+					say = {
+						name = "Say",
+						type = "toggle",
+						desc = "Listen for bidding in the say chat (/say).",
+						set = function(info, val) self.listenSay = val end,
+						get = function(info) return self.listenSay end,
+					},
+					yell = {
+						name = "YELL",
+						type = "toggle",
+						desc = "Listen for people yelling bidding messages (/yell).",
+						set = function(info, val) self.listenYell = val end,
+						get = function(info) return self.listenYell end,
+					},
+				},
+			},
+		},
+	}
+
+	-- local listeningChats = {
+	-- 	"CHAT_MSG_RAID", -- raid chat
+	-- 	"CHAT_MSG_RAID_LEADER", -- raid leader chat
+	-- 	"CHAT_MSG_RAID_WARNING", -- raid warning
+	-- 	"CHAT_MSG_SAY", -- say (for testing)
+	-- }
+
+	opts.args.profiles = LibStub("AceDBOptions-3.0"):GetOptionsTable(self.db)
+
+	return opts
+end
 
 function DKPBidView:OnInitialize()
-	self.db = LibStub("AceDB-3.0"):New("DKPBidView")
+	self.bidStartedRExp = BID_STARTED_REGEXP
+	self.bidEndedNoBidRExp = BID_ENDED_NOBID_REGEXP
+	self.bidEndedWonRExp = BID_ENDED_WON_REGEXP
+	self.bidAcceptedRExp = BID_ACCEPTED_REGEXP
+	self.officerNoteRExp = OFFICER_NOTE_DKP_REGEXP
+
+	self.listenRaid = true
+	self.listenRaidLeader = true
+	self.listenRaidWarning = true
+	self.listenParty = false
+	self.listenPartyLeader = false
+	self.listenSay = true
+	self.listenYell = false
 
 	self.enabled = true
 	self.playerRealm = GetRealmName()
 	self.bidInProgress = false
 	self.currentBidders = {}
+	self.configAppName = "DKP Bid View"
+
+	self.db = LibStub("AceDB-3.0"):New("DKPBidView")
+	self.opts = self:GetOptions()
+
+	local AceConfig = LibStub("AceConfig-3.0")
+	AceConfig:RegisterOptionsTable(self.configAppName, self.opts)
+
+	local AceConfigDialog = LibStub("AceConfigDialog-3.0")
+	AceConfigDialog:AddToBlizOptions(self.configAppName)
 
 	for _, eventID in ipairs(listeningChats) do
 		self:RegisterEvent(eventID, self.HandleChatEvent, self)
@@ -118,7 +251,7 @@ function DKPBidView:HandleChatEvent(author, msg)
 		return
 	end
 
-	if string.match(msg, BID_STARTED_REGEXP) then
+	if string.match(msg, self.bidStartedRExp) then
 		self:StartBidding()
 		return
 	end
@@ -129,12 +262,12 @@ function DKPBidView:HandleChatEvent(author, msg)
 		return
 	end
 
-	if string.match(msg, BID_ENDED_NOBID_REGEXP) or
-			string.match(msg, BID_ENDED_WON_REGEXP) then
+	if string.match(msg, self.bidEndedNoBidRExp) or
+			string.match(msg, self.bidEndedWonRExp) then
 		self:EndBidding()
 	end
 
-	for player, bid in msg:gmatch(BID_ACCEPTED_REGEXP) do
+	for player, bid in msg:gmatch(self.bidAcceptedRExp) do
 		self:AcceptBid(player, bid)
 	end
 end
@@ -215,6 +348,31 @@ function DKPBidView:ShowHelp()
 	print(" * bid accepted: " .. BID_ACCEPTED_REGEXP)
 	print(" * bid ended no bids: " .. BID_ENDED_NOBID_REGEXP)
 	print(" * bid ended with win: " .. BID_ENDED_WON_REGEXP)
+end
+
+-- GetPlayerDKP finds the current player's DKP from the guild's officer note.
+function DKPBidView:GetPlayerDKP()
+	guid = UnitGUID("player")
+	if guid == nil then
+		return "not in guild"
+	end
+
+	total, online, mobile = GetNumGuildMembers()
+
+	for i=1,total do
+		name, rankName, rankIndex, level, classDisplayName, zone, publicNote,
+		officerNote, isOnline, status, class, achievementPoints, achievementRank,
+		isMobile, canSoR, repStanding, memberGUID = GetGuildRosterInfo(i)
+		if memberGUID == guid then
+			local dkp = "unknown"
+			for net, total in officerNote:gmatch(self.officerNoteRExp) do
+				dkp = net
+			end
+			return dkp
+		end
+	end
+
+	return "unknown"
 end
 
 SLASH_DKPBIDVIEW1 = "/dkpbv"
