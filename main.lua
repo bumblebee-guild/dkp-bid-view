@@ -5,13 +5,6 @@ local BID_ENDED_WON_REGEXP = "[%w-]+ won .* with %d+ DKP.*"
 local BID_ACCEPTED_REGEXP = "([%w-]+) %- Current bid: (%d+)%. OK!.*"
 local OFFICER_NOTE_DKP_REGEXP = "Net:%s*(%d+)"
 
-local listeningChats = {
-	"CHAT_MSG_RAID", -- raid chat
-	"CHAT_MSG_RAID_LEADER", -- raid leader chat
-	"CHAT_MSG_RAID_WARNING", -- raid warning
-	"CHAT_MSG_SAY", -- say (for testing)
-}
-
 local DKPBidView = LibStub("AceAddon-3.0"):NewAddon("DKPBidView", "AceEvent-3.0")
 local AceGUI = LibStub("AceGUI-3.0")
 
@@ -83,7 +76,13 @@ function DKPBidView:GetOptions()
 				name = "Enable",
 				desc = "Enables / disables the addon",
 				type = "toggle",
-				set = function(info,val) self.enabled = val end,
+				set = function(info,val)
+					if val then
+						self:Enable()
+					else
+						self:Disable()
+					end
+				end,
 				get = function(info) return self.enabled end
 			},
 			patterns={
@@ -149,62 +148,76 @@ function DKPBidView:GetOptions()
 						name = "Raid Chat",
 						type = "toggle",
 						desc = "Listen for bidding messages in the RAID chat (/raid).",
-						set = function(info, val) self.listenRaid = val end,
+						set = function(info, val)
+							self.listenRaid = val
+							self:ResetChatListeners()
+						end,
 						get = function(info) return self.listenRaid end,
 					},
 					raidLeader = {
 						name = "Raid Leader",
 						type = "toggle",
 						desc = "Listen for bidding messages from the raid leader.",
-						set = function(info, val) self.listenRaidLeader = val end,
+						set = function(info, val)
+							self.listenRaidLeader = val
+							self:ResetChatListeners()
+						end,
 						get = function(info) return self.listenRaidLeader end,
 					},
 					raidWarning = {
 						name = "Raid Warnings",
 						type = "toggle",
 						desc = "Listen for bidding messages in the RAID WARNING chat (/rw).",
-						set = function(info, val) self.listenRaidWarning = val end,
+						set = function(info, val)
+							self.listenRaidWarning = val
+							self:ResetChatListeners()
+						end,
 						get = function(info) return self.listenRaidWarning end,
 					},
 					party = {
 						name = "Party",
 						type = "toggle",
 						desc = "Listen for bidding messages in the party chat (/party).",
-						set = function(info, val) self.listenParty = val end,
+						set = function(info, val)
+							self.listenParty = val
+							self:ResetChatListeners()
+						end,
 						get = function(info) return self.listenParty end,
 					},
 					partyLeader = {
 						name = "Party Leader",
 						type = "toggle",
 						desc = "Listen for bidding messages from the party leader.",
-						set = function(info, val) self.listenPartyLeader = val end,
+						set = function(info, val)
+							self.listenPartyLeader = val
+							self:ResetChatListeners()
+						end,
 						get = function(info) return self.listenPartyLeader end,
 					},
 					say = {
 						name = "Say",
 						type = "toggle",
 						desc = "Listen for bidding in the say chat (/say).",
-						set = function(info, val) self.listenSay = val end,
+						set = function(info, val)
+							self.listenSay = val
+							self:ResetChatListeners()
+						end,
 						get = function(info) return self.listenSay end,
 					},
 					yell = {
 						name = "YELL",
 						type = "toggle",
 						desc = "Listen for people yelling bidding messages (/yell).",
-						set = function(info, val) self.listenYell = val end,
+						set = function(info, val)
+							self.listenYell = val
+							self:ResetChatListeners()
+						end,
 						get = function(info) return self.listenYell end,
 					},
 				},
 			},
 		},
 	}
-
-	-- local listeningChats = {
-	-- 	"CHAT_MSG_RAID", -- raid chat
-	-- 	"CHAT_MSG_RAID_LEADER", -- raid leader chat
-	-- 	"CHAT_MSG_RAID_WARNING", -- raid warning
-	-- 	"CHAT_MSG_SAY", -- say (for testing)
-	-- }
 
 	opts.args.profiles = LibStub("AceDBOptions-3.0"):GetOptionsTable(self.db)
 
@@ -240,6 +253,54 @@ function DKPBidView:OnInitialize()
 
 	local AceConfigDialog = LibStub("AceConfigDialog-3.0")
 	AceConfigDialog:AddToBlizOptions(self.configAppName)
+
+	self:ResetChatListeners()
+end
+
+function DKPBidView:ResetChatListeners()
+	local unregisterEvents = {
+		"CHAT_MSG_RAID",
+		"CHAT_MSG_RAID_LEADER",
+		"CHAT_MSG_RAID_WARNING",
+		"CHAT_MSG_PARTY",
+		"CHAT_MSG_PARTY_LEADER",
+		"CHAT_MSG_SAY",
+		"CHAT_MSG_YELL",
+	}
+
+	for _, eventID in ipairs(unregisterEvents) do
+		self:UnregisterEvent(eventID)
+	end
+
+	local listeningChats = {}
+
+	if self.listenRaid then
+		listeningChats[#listeningChats+1] = "CHAT_MSG_RAID"
+	end
+
+	if self.listenRaidLeader then
+		listeningChats[#listeningChats+1] = "CHAT_MSG_RAID_LEADER"
+	end
+
+	if self.listenRaidWarning then
+		listeningChats[#listeningChats+1] = "CHAT_MSG_RAID_WARNING"
+	end
+
+	if self.listenParty then
+		listeningChats[#listeningChats+1] = "CHAT_MSG_PARTY"
+	end
+
+	if self.listenPartyLeader then
+		listeningChats[#listeningChats+1] = "CHAT_MSG_PARTY_LEADER"
+	end
+
+	if self.listenSay then
+		listeningChats[#listeningChats+1] = "CHAT_MSG_SAY"
+	end
+
+	if self.listenYell then
+		listeningChats[#listeningChats+1] = "CHAT_MSG_YELL"
+	end
 
 	for _, eventID in ipairs(listeningChats) do
 		self:RegisterEvent(eventID, self.HandleChatEvent, self)
