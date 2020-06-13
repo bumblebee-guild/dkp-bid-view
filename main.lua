@@ -7,6 +7,8 @@ local OFFICER_NOTE_DKP_REGEXP = "Net:%s*(%d+)"
 
 local DKPBidView = LibStub("AceAddon-3.0"):NewAddon("DKPBidView", "AceEvent-3.0")
 local AceGUI = LibStub("AceGUI-3.0")
+local AceConfigDialog = LibStub("AceConfigDialog-3.0")
+local AceConfig = LibStub("AceConfig-3.0")
 
 local DKPWin = {
 	["Show"] = function(self)
@@ -248,11 +250,8 @@ function DKPBidView:OnInitialize()
 	self.db = LibStub("AceDB-3.0"):New("DKPBidView")
 	self.opts = self:GetOptions()
 
-	local AceConfig = LibStub("AceConfig-3.0")
 	AceConfig:RegisterOptionsTable(self.configAppName, self.opts)
-
-	local AceConfigDialog = LibStub("AceConfigDialog-3.0")
-	AceConfigDialog:AddToBlizOptions(self.configAppName)
+	self.configDialog = AceConfigDialog:AddToBlizOptions(self.configAppName)
 
 	self:ResetChatListeners()
 end
@@ -403,7 +402,7 @@ function DKPBidView:ShowStatus()
 end
 
 function DKPBidView:ShowHelp()
-	print("Possible commands: status, cancel, hide, show, enable, disable")
+	print("Possible commands: status, cancel, hide, show, enable, disable, config")
 	print("Current matchers:")
 	print(" * bid started: " .. BID_STARTED_REGEXP)
 	print(" * bid accepted: " .. BID_ACCEPTED_REGEXP)
@@ -434,6 +433,11 @@ function DKPBidView:GetPlayerDKP()
 	end
 
 	return "unknown"
+end
+
+-- ShowConfig opens the addon configuration window.
+function DKPBidView:ShowConfig()
+	AceConfigDialog:Open(self.configAppName)
 end
 
 SLASH_DKPBIDVIEW1 = "/dkpbv"
@@ -469,6 +473,11 @@ local function dkpbvCli(arg)
 
 	if arg == "show" then
 		DKPBidView:StartBidding()
+		return
+	end
+
+	if arg == "config" then
+		DKPBidView:ShowConfig()
 		return
 	end
 
