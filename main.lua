@@ -1,8 +1,8 @@
 -- Default values for the patter matches.
 local BID_STARTED_REGEXP = ">>>.* Enter your bid for.*Minimum BID is.*"
 local BID_ENDED_NOBID_REGEXP = "Bidding for.*finished.*"
-local BID_ENDED_WON_REGEXP = "[%w-]+ won .* with %d+ DKP.*"
-local BID_ACCEPTED_REGEXP = "([%w-]+) %- Current bid: (%d+)%. OK!.*"
+local BID_ENDED_WON_REGEXP = "[^%s]+ won .* with %d+ DKP.*"
+local BID_ACCEPTED_REGEXP = "([^%s]+) %- Current bid: (%d+)%. OK!.*"
 local OFFICER_NOTE_DKP_REGEXP = "Net:%s*(%d+)"
 
 local DKPBidView = LibStub("AceAddon-3.0"):NewAddon("DKPBidView", "AceEvent-3.0")
