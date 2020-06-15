@@ -103,6 +103,7 @@ local methods = {
 		end
 		content:SetWidth(contentwidth)
 		content.width = contentwidth
+		self.frame.width = width
 	end,
 
 	["OnHeightSet"] = function(self, height)
@@ -113,6 +114,7 @@ local methods = {
 		end
 		content:SetHeight(contentheight)
 		content.height = contentheight
+		self.frame.height = height
 	end,
 
 	["SetTitle"] = function(self, title)

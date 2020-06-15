@@ -11,16 +11,26 @@ local AceConfigDialog = LibStub("AceConfigDialog-3.0")
 local AceConfig = LibStub("AceConfig-3.0")
 
 local DKPWin = {
+	width = 180,
+	height = 200,
+
+	position = {
+		point = "RIGHT",
+		xOfs = -50,
+		yOfs = 0,
+	},
+
 	["Show"] = function(self)
 		if self.frame ~= nil then
 			self:Hide()
 		end
 
-		frame = AceGUI:Create("DKPFrame")
-		frame:SetWidth(180)
-		frame:SetHeight(200)
+		local frame = AceGUI:Create("DKPFrame")
+		frame:SetWidth(self.width)
+		frame:SetHeight(self.height)
 
-		frame:SetPoint("RIGHT", -50, 0)
+		frame:ClearAllPoints()
+		frame:SetPoint(self.position.point, self.position.xOfs, self.position.yOfs)
 
 		frame:SetTitle("DKP Bid View")
 		frame:SetStatusText("Your DKP: " .. DKPBidView:GetPlayerDKP())
@@ -33,6 +43,17 @@ local DKPWin = {
 		if self.frame == nil then
 			return
 		end
+
+		self.width = self.frame.frame.width
+		self.height = self.frame.frame.height
+
+		point, relativeTo, relativePoint, xOfs, yOfs = self.frame:GetPoint()
+		self.position = {
+			point = point,
+			xOfs = xOfs,
+			yOfs = yOfs,
+		}
+
 		self.frame:Release()
 		self.frame = nil
 	end,
@@ -85,7 +106,7 @@ function DKPBidView:GetOptions()
 						self:Disable()
 					end
 				end,
-				get = function(info) return self.enabled end
+				get = function(info) return self.db.char.enabled end
 			},
 			patterns={
 				name = "Patterns",
@@ -96,32 +117,32 @@ function DKPBidView:GetOptions()
 						name = "Bid Started",
 						type = "input",
 						desc = "Pattern for matching bidding started chat messages.",
-						set = function(info, val) self.bidStartedRExp = val end,
-						get = function(info) return self.bidStartedRExp end,
+						set = function(info, val) self.db.profile.patterns.bidStartedRExp = val end,
+						get = function(info) return self.db.profile.patterns.bidStartedRExp end,
 						multiline = 2,
 					},
 					bidEndedNoBid = {
 						name = "Bid Ended (no bids)",
 						type = "input",
 						desc = "Pattern for the chat message when bidding ended without any bids.",
-						set = function(info, val) self.bidEndedNoBidRExp = val end,
-						get = function(info) return self.bidEndedNoBidRExp end,
+						set = function(info, val) self.db.profile.patterns.bidEndedNoBidRExp = val end,
+						get = function(info) return self.db.profile.patterns.bidEndedNoBidRExp end,
 						multiline = 2,
 					},
 					bidEndedWon = {
 						name = "Bid Won",
 						type = "input",
 						desc = "Pattern for the chat message when someone won an item after bidding.",
-						set = function(info, val) self.bidEndedWonRExp = val end,
-						get = function(info) return self.bidEndedWonRExp end,
+						set = function(info, val) self.db.profile.patterns.bidEndedWonRExp = val end,
+						get = function(info) return self.db.profile.patterns.bidEndedWonRExp end,
 						multiline = 2,
 					},
 					bidAccepted = {
 						name = "Bid Accepted",
 						type = "input",
 						desc = "Pattern for the chat message when someone's bid has been accepted.",
-						set = function(info, val) self.bidAcceptedRExp = val end,
-						get = function(info) return self.bidAcceptedRExp end,
+						set = function(info, val) self.db.profile.patterns.bidAcceptedRExp = val end,
+						get = function(info) return self.db.profile.patterns.bidAcceptedRExp end,
 						multiline = 2,
 					},
 				}
@@ -135,8 +156,8 @@ function DKPBidView:GetOptions()
 						name = "DKP From Officer Note",
 						type = "input",
 						desc = "This pattern should match one number. It is used against the player's officer note in their guild.",
-						set = function(info, val) self.officerNoteRExp = val end,
-						get = function(info) return self.officerNoteRExp end,
+						set = function(info, val) self.db.profile.dkpExtract.officerNoteRExp = val end,
+						get = function(info) return self.db.profile.dkpExtract.officerNoteRExp end,
 						multiline = 2,
 					}
 				},
@@ -151,70 +172,70 @@ function DKPBidView:GetOptions()
 						type = "toggle",
 						desc = "Listen for bidding messages in the RAID chat (/raid).",
 						set = function(info, val)
-							self.listenRaid = val
+							self.db.profile.chats.listenRaid = val
 							self:ResetChatListeners()
 						end,
-						get = function(info) return self.listenRaid end,
+						get = function(info) return self.db.profile.chats.listenRaid end,
 					},
 					raidLeader = {
 						name = "Raid Leader",
 						type = "toggle",
 						desc = "Listen for bidding messages from the raid leader.",
 						set = function(info, val)
-							self.listenRaidLeader = val
+							self.db.profile.chats.listenRaidLeader = val
 							self:ResetChatListeners()
 						end,
-						get = function(info) return self.listenRaidLeader end,
+						get = function(info) return self.db.profile.chats.listenRaidLeader end,
 					},
 					raidWarning = {
 						name = "Raid Warnings",
 						type = "toggle",
 						desc = "Listen for bidding messages in the RAID WARNING chat (/rw).",
 						set = function(info, val)
-							self.listenRaidWarning = val
+							self.db.profile.chats.listenRaidWarning = val
 							self:ResetChatListeners()
 						end,
-						get = function(info) return self.listenRaidWarning end,
+						get = function(info) return self.db.profile.chats.listenRaidWarning end,
 					},
 					party = {
 						name = "Party",
 						type = "toggle",
 						desc = "Listen for bidding messages in the party chat (/party).",
 						set = function(info, val)
-							self.listenParty = val
+							self.db.profile.chats.listenParty = val
 							self:ResetChatListeners()
 						end,
-						get = function(info) return self.listenParty end,
+						get = function(info) return self.db.profile.chats.listenParty end,
 					},
 					partyLeader = {
 						name = "Party Leader",
 						type = "toggle",
 						desc = "Listen for bidding messages from the party leader.",
 						set = function(info, val)
-							self.listenPartyLeader = val
+							self.db.profile.chats.listenPartyLeader = val
 							self:ResetChatListeners()
 						end,
-						get = function(info) return self.listenPartyLeader end,
+						get = function(info) return self.db.profile.chats.listenPartyLeader end,
 					},
 					say = {
 						name = "Say",
 						type = "toggle",
 						desc = "Listen for bidding in the say chat (/say).",
 						set = function(info, val)
-							self.listenSay = val
+							self.db.profile.chats.listenSay = val
 							self:ResetChatListeners()
 						end,
-						get = function(info) return self.listenSay end,
+						get = function(info) return self.db.profile.chats.listenSay end,
 					},
 					yell = {
 						name = "YELL",
 						type = "toggle",
 						desc = "Listen for people yelling bidding messages (/yell).",
 						set = function(info, val)
-							self.listenYell = val
+							self.db.profile.chats.listenYell = val
 							self:ResetChatListeners()
 						end,
-						get = function(info) return self.listenYell end,
+						get = function(info) return self.db.profile.chats.listenYell end,
 					},
 				},
 			},
@@ -227,33 +248,71 @@ function DKPBidView:GetOptions()
 end
 
 function DKPBidView:OnInitialize()
-	self.bidStartedRExp = BID_STARTED_REGEXP
-	self.bidEndedNoBidRExp = BID_ENDED_NOBID_REGEXP
-	self.bidEndedWonRExp = BID_ENDED_WON_REGEXP
-	self.bidAcceptedRExp = BID_ACCEPTED_REGEXP
-	self.officerNoteRExp = OFFICER_NOTE_DKP_REGEXP
-
-	self.listenRaid = true
-	self.listenRaidLeader = true
-	self.listenRaidWarning = true
-	self.listenParty = false
-	self.listenPartyLeader = false
-	self.listenSay = true
-	self.listenYell = false
-
-	self.enabled = true
 	self.playerRealm = GetRealmName()
 	self.bidInProgress = false
 	self.currentBidders = {}
 	self.configAppName = "DKP Bid View"
 
-	self.db = LibStub("AceDB-3.0"):New("DKPBidView")
+	self.db = LibStub("AceDB-3.0"):New("DKPBidView", self:GetDBDefaults(), true)
 	self.opts = self:GetOptions()
 
 	AceConfig:RegisterOptionsTable(self.configAppName, self.opts)
 	self.configDialog = AceConfigDialog:AddToBlizOptions(self.configAppName)
 
+	self.db.RegisterCallback(self, "OnProfileChanged", "RefreshConfig")
+	self.db.RegisterCallback(self, "OnProfileCopied", "RefreshConfig")
+	self.db.RegisterCallback(self, "OnProfileReset", "RefreshConfig")
+
 	self:ResetChatListeners()
+end
+
+function DKPBidView:RefreshConfig()
+	self:ResetChatListeners()
+end
+
+function DKPBidView:GetDBDefaults()
+	return {
+		char = {
+			enabled = true,
+		},
+		profile = {
+			chats = {
+				listenRaid = true,
+				listenRaidLeader = true,
+				listenRaidWarning = true,
+				listenRaidParty = false,
+				listenRaidPartyLeader = false,
+				listenRaidSay = false,
+				listenRaidYell = false,
+			},
+			dkpExtract = {
+				officerNoteRExp = OFFICER_NOTE_DKP_REGEXP,
+			},
+			patterns = {
+				bidStartedRExp = BID_STARTED_REGEXP,
+				bidEndedNoBidRExp = BID_ENDED_NOBID_REGEXP,
+				bidEndedWonRExp = BID_ENDED_WON_REGEXP,
+				bidAcceptedRExp = BID_ACCEPTED_REGEXP,
+			},
+			window = {
+				size = {
+					width = 180,
+					height = 200,
+				},
+				position = {
+					point = "RIGHT",
+					xOfs = -50,
+					yOfs = 0,
+				},
+			},
+		},
+	}
+end
+
+function DKPBidView:OnEnable()
+	DKPWin.width = self.db.profile.window.size.width
+	DKPWin.height = self.db.profile.window.size.height
+	DKPWin.position = self.db.profile.window.position
 end
 
 function DKPBidView:ResetChatListeners()
@@ -273,31 +332,31 @@ function DKPBidView:ResetChatListeners()
 
 	local listeningChats = {}
 
-	if self.listenRaid then
+	if self.db.profile.chats.listenRaid then
 		listeningChats[#listeningChats+1] = "CHAT_MSG_RAID"
 	end
 
-	if self.listenRaidLeader then
+	if self.db.profile.chats.listenRaidLeader then
 		listeningChats[#listeningChats+1] = "CHAT_MSG_RAID_LEADER"
 	end
 
-	if self.listenRaidWarning then
+	if self.db.profile.chats.listenRaidWarning then
 		listeningChats[#listeningChats+1] = "CHAT_MSG_RAID_WARNING"
 	end
 
-	if self.listenParty then
+	if self.db.profile.chats.listenParty then
 		listeningChats[#listeningChats+1] = "CHAT_MSG_PARTY"
 	end
 
-	if self.listenPartyLeader then
+	if self.db.profile.chats.listenPartyLeader then
 		listeningChats[#listeningChats+1] = "CHAT_MSG_PARTY_LEADER"
 	end
 
-	if self.listenSay then
+	if self.db.profile.chats.listenSay then
 		listeningChats[#listeningChats+1] = "CHAT_MSG_SAY"
 	end
 
-	if self.listenYell then
+	if self.db.profile.chats.listenYell then
 		listeningChats[#listeningChats+1] = "CHAT_MSG_YELL"
 	end
 
@@ -307,11 +366,11 @@ function DKPBidView:ResetChatListeners()
 end
 
 function DKPBidView:HandleChatEvent(author, msg)
-	if not self.enabled then
+	if not self.db.char.enabled then
 		return
 	end
 
-	if string.match(msg, self.bidStartedRExp) then
+	if string.match(msg, self.db.profile.patterns.bidStartedRExp) then
 		self:StartBidding()
 		return
 	end
@@ -322,25 +381,30 @@ function DKPBidView:HandleChatEvent(author, msg)
 		return
 	end
 
-	if string.match(msg, self.bidEndedNoBidRExp) or
-			string.match(msg, self.bidEndedWonRExp) then
+	if string.match(msg, self.db.profile.patterns.bidEndedNoBidRExp) or
+			string.match(msg, self.db.profile.patterns.bidEndedWonRExp) then
 		self:EndBidding()
 	end
 
-	for player, bid in msg:gmatch(self.bidAcceptedRExp) do
+	for player, bid in msg:gmatch(self.db.profile.patterns.bidAcceptedRExp) do
 		self:AcceptBid(player, bid)
 	end
 end
 
 function DKPBidView:StartBidding()
-	self:ResetState();
-	self.bidInProgress = true;
-	DKPWin:Show();
+	self:ResetState()
+	self.bidInProgress = true
+	DKPWin:Show()
 end
 
 function DKPBidView:EndBidding()
-	self:ResetState();
-	DKPWin:Hide();
+	self:ResetState()
+
+	self.db.profile.window.size.width = DKPWin.width
+	self.db.profile.window.size.height = DKPWin.height
+	self.db.profile.window.position = DKPWin.position
+
+	DKPWin:Hide()
 end
 
 function DKPBidView:AcceptBid(player, bid)
@@ -369,28 +433,28 @@ function DKPBidView:ResetState()
 end
 
 function DKPBidView:Enable()
-	if self.enabled then
+	if self.db.char.enabled then
 		return
 	end
 
 	self:ResetState();
-	self.enabled = true
+	self.db.char.enabled = true
 	print("dkpbv enabled")
 end
 
 function DKPBidView:Disable()
-	if not self.enabled then
+	if not self.db.char.enabled then
 		return
 	end
 
 	DKPWin:Hide();
 	self:ResetState();
-	self.enabled = false
+	self.db.char.enabled = false
 	print("dkpbv disabled. To enable it again write /dkpbv enable")
 end
 
 function DKPBidView:ShowStatus()
-	if self.enabled then
+	if self.db.char.enabled then
 		print("dkpbv: enabled")
 	else
 		print("dkpbv: disabled")
@@ -402,12 +466,9 @@ function DKPBidView:ShowStatus()
 end
 
 function DKPBidView:ShowHelp()
-	print("Possible commands: status, cancel, hide, show, enable, disable, config")
-	print("Current matchers:")
-	print(" * bid started: " .. BID_STARTED_REGEXP)
-	print(" * bid accepted: " .. BID_ACCEPTED_REGEXP)
-	print(" * bid ended no bids: " .. BID_ENDED_NOBID_REGEXP)
-	print(" * bid ended with win: " .. BID_ENDED_WON_REGEXP)
+	print("Welcome to the DKP Bid View command line interface!")
+	print("Possible sub-commands: status, cancel, hide, show, enable, disable, config")
+	print("You can execute them by typing /dkpbv sub-command")
 end
 
 -- GetPlayerDKP finds the current player's DKP from the guild's officer note.
@@ -418,6 +479,7 @@ function DKPBidView:GetPlayerDKP()
 	end
 
 	total, online, mobile = GetNumGuildMembers()
+	local notRegExp = self.db.profile.dkpExtract.officerNoteRExp
 
 	for i=1,total do
 		name, rankName, rankIndex, level, classDisplayName, zone, publicNote,
@@ -425,7 +487,7 @@ function DKPBidView:GetPlayerDKP()
 		isMobile, canSoR, repStanding, memberGUID = GetGuildRosterInfo(i)
 		if memberGUID == guid then
 			local dkp = "unknown"
-			for net, total in officerNote:gmatch(self.officerNoteRExp) do
+			for net, total in officerNote:gmatch(notRegExp) do
 				dkp = net
 			end
 			return dkp
