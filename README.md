@@ -25,15 +25,11 @@ be much more stable.
 
 ## TODO
 
-[ ] Config screen
-
 [ ] Cancel button
 
 [ ] Bid button
 
 [ ] Showing the item for which the current bid is
-
-[ ] Remember window position and size
 
 [ ] Player names in class colors
 
