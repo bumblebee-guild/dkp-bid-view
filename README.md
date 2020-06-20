@@ -68,5 +68,3 @@ be much more stable.
 [ ] Player names in class colors
 
 [ ] Configure a wish list of items and ignore all else
-
-[ ] Create release and upload addon zip on git tag with Github action
