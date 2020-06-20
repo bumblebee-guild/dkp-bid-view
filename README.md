@@ -39,6 +39,9 @@ The first message is opening of the bid. At this point the DKP Bid View will pop
 window open and show you that a bid is going on. The next messages are different bids
 by players BidderOne, BidderTwo and StupidBidder. The addon will show an ordered
 list of the valid bids only and ignore any noise. And the last message by LootMaster
+closes the bid which causes the DKP Bid View window to disappear.
+
+### Message Formats
 
 The recognized message formats can be altered, though! This can be done via the addon's
 configuration UI. It can be found under Interface Options -> AddOns -> DKP Bid View. Under
@@ -46,9 +49,16 @@ the patterns tab there are the different patterns for every type of message. The
 all Lua regular expressions which can be hard to change for someone unfamiliar with them,
 though. I am thinking of a better way to create patterns.
 
+### My DKP Status
+
 As the screenshots show the addon will try to display your character's current DKP. It
 searches for it in the guild officers' notes. And there is a different patter for that
 as well.
+
+### Window Positioning
+
+One can position the DKP without waiting for a DKP bidding to start by typing `/dkpbv show`.
+Once the window is on the desired position it can be hidden with `/dkpbv hide`.
 
 ## Alternative Future Approach
 
