@@ -25,6 +25,11 @@ local function Button_OnClick(frame)
 	frame.obj:Hide()
 end
 
+local function BidButton_OnClick(frame)
+	PlaySound(799) -- SOUNDKIT.GS_TITLE_OPTION_EXIT
+	frame.obj:Fire("OnBid")
+end
+
 local function Frame_OnShow(frame)
 	frame.obj:Fire("OnShow")
 end
@@ -196,6 +201,20 @@ local function Constructor()
 	frame:SetScript("OnHide", Frame_OnClose)
 	frame:SetScript("OnMouseDown", Frame_OnMouseDown)
 
+	local closebutton = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
+	closebutton:SetScript("OnClick", Button_OnClick)
+	closebutton:SetPoint("BOTTOMRIGHT", -15, 42)
+	closebutton:SetHeight(20)
+	closebutton:SetWidth(70)
+	closebutton:SetText(CLOSE)
+
+	local bidbutton = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
+	bidbutton:SetScript("OnClick", BidButton_OnClick)
+	bidbutton:SetPoint("BOTTOMLEFT", 15, 42)
+	bidbutton:SetHeight(20)
+	bidbutton:SetWidth(40)
+	bidbutton:SetText("Bid")
+
 	local statusbg = CreateFrame("Button", nil, frame)
 	statusbg:SetPoint("BOTTOMLEFT", 15, 15)
 	statusbg:SetPoint("BOTTOMRIGHT", -15, 15)
@@ -303,6 +322,9 @@ local function Constructor()
 	for method, func in pairs(methods) do
 		widget[method] = func
 	end
+
+	bidbutton.obj = widget
+	closebutton.obj = widget
 	statusbg.obj = widget
 
 	return AceGUI:RegisterAsContainer(widget)

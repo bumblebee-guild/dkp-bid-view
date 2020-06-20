@@ -49,6 +49,10 @@ the patterns tab there are the different patterns for every type of message. The
 all Lua regular expressions which can be hard to change for someone unfamiliar with them,
 though. I am thinking of a better way to create patterns.
 
+### Bid Button
+
+The addon comes with a Bid button. When bidding is open one can use it to bid for the current item. It sends a chat message to /raid, /party or /say, depending the current status of the player. The sent message can be controlled in the AddOns settings.
+
 ### My DKP Status
 
 As the screenshots show the addon will try to display your character's current DKP. It
@@ -68,10 +72,6 @@ of some sorts. This way the addon will not rely on chat parsing and everything c
 be much more stable.
 
 ## TODO
-
-[ ] Cancel button
-
-[ ] Bid button
 
 [ ] Showing the item for which the current bid is
 

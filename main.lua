@@ -4,6 +4,7 @@ local BID_ENDED_NOBID_REGEXP = "Bidding for.*finished.*"
 local BID_ENDED_WON_REGEXP = "[^%s]+ won .* with %d+ DKP.*"
 local BID_ACCEPTED_REGEXP = "([^%s]+) %- Current bid: (%d+)%. OK!.*"
 local OFFICER_NOTE_DKP_REGEXP = "Net:%s*(%d+)"
+local BID_MESSAGE = "+"
 
 local DKPBidView = LibStub("AceAddon-3.0"):NewAddon("DKPBidView", "AceEvent-3.0")
 local AceGUI = LibStub("AceGUI-3.0")
@@ -30,11 +31,17 @@ local DKPWin = {
 		frame:SetHeight(self.height)
 
 		frame:ClearAllPoints()
-		frame:SetPoint(self.position.point, self.position.xOfs, self.position.yOfs)
+		frame:SetPoint(self.position.point,
+			self.position.xOfs, self.position.yOfs)
 
 		frame:SetTitle("DKP Bid View")
 		frame:SetStatusText("Your DKP: " .. DKPBidView:GetPlayerDKP())
-		frame:SetLayout("List")
+
+		local noBidsLabel = AceGUI:Create("Label")
+		noBidsLabel:SetText("No Bids")
+		noBidsLabel:SetFullWidth(true)
+		noBidsLabel:SetJustifyH("CENTER")
+		frame:AddChild(noBidsLabel)
 
 		self.frame = frame
 	end,
@@ -64,6 +71,7 @@ local DKPWin = {
 		end
 
 		self.frame:ReleaseChildren()
+		self.frame:SetLayout("List")
 		local dkpToBidder = {}
 		local order = {}
 
@@ -108,11 +116,45 @@ function DKPBidView:GetOptions()
 				end,
 				get = function(info) return self.db.char.enabled end
 			},
+			bidding = {
+				name = "Bid Button",
+				desc = "Controls the behaviour of the Bid button.",
+				type = "group",
+				order = 3,
+				args = {
+					explanation = {
+						type = "description",
+						order = 0,
+						name = "When bidding is open one can use the Bid button to bid " ..
+						"for the current item. It sends a chat message to /raid, " ..
+						"/party or /say, depending whether the player is in raid, " ..
+						"party or alone. This section controls the behaviour of the " ..
+						"Bid button.",
+					},
+					bidMessage = {
+						name = "Bid Message",
+						type = "input",
+						desc = "Change the text that will be sent once the Bid button has been pressed.",
+						set = function(info, val) self.db.profile.bidding.bidMessage = val end,
+						get = function(info) return self.db.profile.bidding.bidMessage end,
+					},
+				},
+			},
 			patterns={
 				name = "Patterns",
 				desc = "Patterns for matching bidding messages.",
 				type = "group",
+				order = 1,
 				args={
+					explanation = {
+						type = "description",
+						order = 0,
+						name = "This section controls the different patters this " ..
+							"addon will listen to in raid. Every pattern matches " ..
+							"a particular event. They are all Lua regular expressions. " ..
+							"Some of them are searching for particular thing in the " ..
+							"message. Such things must be regular expression groups.",
+					},
 					bidStarted = {
 						name = "Bid Started",
 						type = "input",
@@ -140,7 +182,9 @@ function DKPBidView:GetOptions()
 					bidAccepted = {
 						name = "Bid Accepted",
 						type = "input",
-						desc = "Pattern for the chat message when someone's bid has been accepted.",
+						desc = "Pattern for the chat message when someone's bid has been accepted. " ..
+							"This pattern must have to groups. The first one must match the player " ..
+							"and the second one the DKP value.",
 						set = function(info, val) self.db.profile.patterns.bidAcceptedRExp = val end,
 						get = function(info) return self.db.profile.patterns.bidAcceptedRExp end,
 						multiline = 2,
@@ -151,11 +195,23 @@ function DKPBidView:GetOptions()
 				name = "My DKP",
 				desc = "Configuration for obtaining player's DKP.",
 				type = "group",
+				order = 2,
 				args = {
+					explanation = {
+						type = "description",
+						order = 0,
+						name = "This section controls how your DKP is shown on the " ..
+							"bidding window status bar. Currently the only supported " ..
+							"way of acquiring the DKP is from the your guild's " ..
+							"officer note.",
+					},
 					dkpOfficerNote = {
 						name = "DKP From Officer Note",
 						type = "input",
-						desc = "This pattern should match one number. It is used against the player's officer note in their guild.",
+						desc = "This pattern should match one number. It is used " ..
+							"against the player's officer note in their guild. " ..
+							"The pattern is Lua regular expression. It must have " ..
+							"one group. The matched group will be the player's DKP.",
 						set = function(info, val) self.db.profile.dkpExtract.officerNoteRExp = val end,
 						get = function(info) return self.db.profile.dkpExtract.officerNoteRExp end,
 						multiline = 2,
@@ -166,7 +222,14 @@ function DKPBidView:GetOptions()
 				name = "Chats",
 				desc = "Configure which chats this addon will read.",
 				type = "group",
+				order = 0,
 				args = {
+					explanation = {
+						type = "description",
+						order = 0,
+						name = "This addon listens to chat messages for bidding events. " ..
+							"Here you can control which channels this addon will listen to.",
+					},
 					raid = {
 						name = "Raid Chat",
 						type = "toggle",
@@ -294,6 +357,9 @@ function DKPBidView:GetDBDefaults()
 				bidEndedWonRExp = BID_ENDED_WON_REGEXP,
 				bidAcceptedRExp = BID_ACCEPTED_REGEXP,
 			},
+			bidding = {
+				bidMessage = BID_MESSAGE,
+			},
 			window = {
 				size = {
 					width = 180,
@@ -395,6 +461,11 @@ function DKPBidView:StartBidding()
 	self:ResetState()
 	self.bidInProgress = true
 	DKPWin:Show()
+	-- Fired when the player has pressed the "Bid" button on
+	-- the DKP window.
+	DKPWin.frame:SetCallback("OnBid", function(widget)
+		self:PlaceBid()
+	end)
 end
 
 function DKPBidView:EndBidding()
@@ -423,6 +494,20 @@ function DKPBidView:AcceptBid(player, bid)
 
 	self.currentBidders[player] = bid
 	DKPWin:RefreshBidders(self.currentBidders)
+end
+
+function DKPBidView:PlaceBid()
+	local channel = "SAY"
+
+	if UnitInParty("player") then
+		channel = "PARTY"
+	end
+
+	if UnitInRaid("player") == 1 then
+		channel = "RAID"
+	end
+
+	SendChatMessage(self.db.profile.bidding.bidMessage, channel)
 end
 
 -- ResetState returns the state of the addon to the initial position. That
