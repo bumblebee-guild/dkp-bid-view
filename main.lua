@@ -153,7 +153,8 @@ function DKPBidView:GetOptions()
 							"addon will listen to in raid. Every pattern matches " ..
 							"a particular event. They are all Lua regular expressions. " ..
 							"Some of them are searching for particular thing in the " ..
-							"message. Such things must be regular expression groups.",
+							"message. Such things must be matched by regular expression " ..
+							"groups.",
 					},
 					bidStarted = {
 						name = "Bid Started",
@@ -183,7 +184,7 @@ function DKPBidView:GetOptions()
 						name = "Bid Accepted",
 						type = "input",
 						desc = "Pattern for the chat message when someone's bid has been accepted. " ..
-							"This pattern must have to groups. The first one must match the player " ..
+							"This pattern must have two groups. The first one must match the player " ..
 							"and the second one the DKP value.",
 						set = function(info, val) self.db.profile.patterns.bidAcceptedRExp = val end,
 						get = function(info) return self.db.profile.patterns.bidAcceptedRExp end,
