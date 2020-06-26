@@ -654,7 +654,8 @@ local function dkpbvCli(arg)
 	end
 
 	if arg == "test" then
-		local item = Item:CreateFromItemID(23288)
+		-- local item = Item:CreateFromItemID(23288) -- long name
+		local item = Item:CreateFromItemID(19360) -- short name
 		item:ContinueOnItemLoad(function()
 			local itemLink = item:GetItemLink()
 			-- local printable = gsub(itemLink, "\124", "\124\124");
