@@ -75,8 +75,9 @@ be much more stable.
 
 ## TODO
 
-[ ] Showing the item for which the current bid is
+[ ] Indicate when the player is winning the bid
 
 [ ] Player names in class colors
 
 [ ] Configure a wish list of items and ignore all else
+
