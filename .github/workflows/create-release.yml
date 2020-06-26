@@ -21,6 +21,7 @@ jobs:
           export file_name=DKP-Bid-View-${version}.zip
           git archive -o "${file_name}" --format zip --prefix "${prefix}/" HEAD
           zip --delete "${file_name}" "${prefix}/.github/*"
+          zip --delete "${file_name}" "${prefix}/screenshots/*"
           mkdir "${prefix}"
           sed "s/^## Version:.*$/## Version: ${version}/" DKPBidView.toc > "${prefix}/DKPBidView.toc"
           zip --update "${file_name}" "${prefix}/DKPBidView.toc"
