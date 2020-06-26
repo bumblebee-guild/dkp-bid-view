@@ -1,5 +1,5 @@
 -- Default values for the patter matches.
-local BID_STARTED_REGEXP = ">>>.* Enter your bid for.*Minimum BID is.*"
+local BID_STARTED_REGEXP = ">>>.* Enter your bid for (.+)%. Minimum BID is.*"
 local BID_ENDED_NOBID_REGEXP = "Bidding for.*finished.*"
 local BID_ENDED_WON_REGEXP = "[^%s]+ won .* with %d+ DKP.*"
 local BID_ACCEPTED_REGEXP = "([^%s]+) %- Current bid: (%d+)%. OK!.*"
@@ -21,7 +21,7 @@ local DKPWin = {
 		yOfs = 0,
 	},
 
-	["Show"] = function(self)
+	["Show"] = function(self, item)
 		if self.frame ~= nil then
 			self:Hide()
 		end
@@ -34,15 +34,21 @@ local DKPWin = {
 		frame:SetPoint(self.position.point,
 			self.position.xOfs, self.position.yOfs)
 
-		frame:SetTitle("DKP Bid View")
+		if item == nil then
+			item = "Unknown Item"
+		end
+		frame:SetTitle(item)
 		frame:SetStatusText("Your DKP: " .. DKPBidView:GetPlayerDKP())
 
-		local noBidsLabel = AceGUI:Create("Label")
-		noBidsLabel:SetText("No Bids")
-		noBidsLabel:SetFullWidth(true)
+		local noBidsLabel = frame.content:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+		noBidsLabel:SetPoint("TOPLEFT", 0, 20)
+		noBidsLabel:SetPoint("BOTTOMRIGHT", 0, 0)
+		noBidsLabel:SetHeight(20)
 		noBidsLabel:SetJustifyH("CENTER")
-		frame:AddChild(noBidsLabel)
+		noBidsLabel:SetJustifyV("CENTER")
+		noBidsLabel:SetText("No Bids")
 
+		self.noBidsLabel = noBidsLabel
 		self.frame = frame
 	end,
 
@@ -61,8 +67,18 @@ local DKPWin = {
 			yOfs = yOfs,
 		}
 
+		self:RemoveNoBidders()
+
 		self.frame:Release()
 		self.frame = nil
+	end,
+
+	["RemoveNoBidders"] = function(self)
+		if self.noBidsLabel == nil then
+			return
+		end
+
+		self.noBidsLabel:Hide()
 	end,
 
 	["RefreshBidders"] = function(self, currentBidders)
@@ -85,6 +101,8 @@ local DKPWin = {
 				dkpToBidder[ibid][player] = true
 			end
 		end
+
+		self:RemoveNoBidders()
 
 		table.sort(order)
 		for i=#order,1,-1 do
@@ -159,7 +177,9 @@ function DKPBidView:GetOptions()
 					bidStarted = {
 						name = "Bid Started",
 						type = "input",
-						desc = "Pattern for matching bidding started chat messages.",
+						desc = "Pattern for matching bidding started chat messages. If " ..
+							"the pattern includes one group it will be shown as the item " ..
+							"currently under bid.",
 						set = function(info, val) self.db.profile.patterns.bidStartedRExp = val end,
 						get = function(info) return self.db.profile.patterns.bidStartedRExp end,
 						multiline = 2,
@@ -437,8 +457,9 @@ function DKPBidView:HandleChatEvent(author, msg)
 		return
 	end
 
-	if string.match(msg, self.db.profile.patterns.bidStartedRExp) then
-		self:StartBidding()
+	local _, _, itemLink = string.find(msg, self.db.profile.patterns.bidStartedRExp)
+	if not (itemLink == nil) then
+		self:StartBidding(itemLink)
 		return
 	end
 
@@ -458,10 +479,10 @@ function DKPBidView:HandleChatEvent(author, msg)
 	end
 end
 
-function DKPBidView:StartBidding()
+function DKPBidView:StartBidding(item)
 	self:ResetState()
 	self.bidInProgress = true
-	DKPWin:Show()
+	DKPWin:Show(item)
 	-- Fired when the player has pressed the "Bid" button on
 	-- the DKP window.
 	DKPWin.frame:SetCallback("OnBid", function(widget)
@@ -481,12 +502,12 @@ end
 
 function DKPBidView:AcceptBid(player, bid)
 	if tonumber(bid) == nil then
-		print("Bid [" .. bid .. "] from " .. player .. " is not a number. Ignoring it.")
+		DKPBidView:Print("Bid [" .. bid .. "] from " .. player .. " is not a number. Ignoring it.")
 		return
 	end
 
 	if player == nil then
-		print("Bid for nil player reached acceptBid. Aborting.")
+		DKPBidView:Print("Bid for nil player reached acceptBid. Aborting.")
 		return
 	end
 
@@ -525,7 +546,7 @@ function DKPBidView:Enable()
 
 	self:ResetState();
 	self.db.char.enabled = true
-	print("dkpbv enabled")
+	DKPBidView:Print("DKP Bid View enabled")
 end
 
 function DKPBidView:Disable()
@@ -536,18 +557,18 @@ function DKPBidView:Disable()
 	DKPWin:Hide();
 	self:ResetState();
 	self.db.char.enabled = false
-	print("dkpbv disabled. To enable it again write /dkpbv enable")
+	DKPBidView:Print("DKP Bid View disabled. To enable it again write /dkpbv enable")
 end
 
 function DKPBidView:ShowStatus()
 	if self.db.char.enabled then
-		print("dkpbv: enabled")
+		DKPBidView:Print("enabled")
 	else
-		print("dkpbv: disabled")
+		DKPBidView:Print("disabled")
 	end
 
 	if self.bidInProgress then
-		print("dkpbv: currently bidding is in progress")
+		DKPBidView:Print("currently bidding is in progress")
 	end
 end
 
@@ -555,6 +576,10 @@ function DKPBidView:ShowHelp()
 	print("Welcome to the DKP Bid View command line interface!")
 	print("Possible sub-commands: status, cancel, hide, show, enable, disable, config")
 	print("You can execute them by typing /dkpbv sub-command")
+end
+
+function DKPBidView:Print(msg)
+	print("dkpbv: " .. msg)
 end
 
 -- GetPlayerDKP finds the current player's DKP from the guild's officer note.
@@ -568,9 +593,8 @@ function DKPBidView:GetPlayerDKP()
 	local notRegExp = self.db.profile.dkpExtract.officerNoteRExp
 
 	for i=1,total do
-		name, rankName, rankIndex, level, classDisplayName, zone, publicNote,
-		officerNote, isOnline, status, class, achievementPoints, achievementRank,
-		isMobile, canSoR, repStanding, memberGUID = GetGuildRosterInfo(i)
+		local _, _, _, _, _, _, _, officerNote, _, _, _, _, _, _, _,
+			_, memberGUID = GetGuildRosterInfo(i)
 		if memberGUID == guid then
 			local dkp = "unknown"
 			for net, total in officerNote:gmatch(notRegExp) do
@@ -620,7 +644,7 @@ local function dkpbvCli(arg)
 	end
 
 	if arg == "show" then
-		DKPBidView:StartBidding()
+		DKPBidView:StartBidding(nil)
 		return
 	end
 
@@ -629,7 +653,21 @@ local function dkpbvCli(arg)
 		return
 	end
 
-	print("dkpbv: unknown command '" .. arg .. "'")
+	if arg == "test" then
+		local item = Item:CreateFromItemID(23288)
+		item:ContinueOnItemLoad(function()
+			local itemLink = item:GetItemLink()
+			-- local printable = gsub(itemLink, "\124", "\124\124");
+
+			SendChatMessage(">>> Please no raid spam. Enter your bid for " .. itemLink .. ". Minimum BID is 40!", "SAY")
+			SendChatMessage("Ðezo-Ashbringer - Current bid: 80. OK!", "SAY")
+			SendChatMessage("Nightruner - Current bid: 120. OK!", "SAY")
+			SendChatMessage("Arcticus - NOT OK! You need at least 20 DKP to place a bid. You have 5.", "SAY")
+		end)
+		return
+	end
+
+	DKPBidView:Print("unknown command '" .. arg .. "'")
 	DKPBidView:ShowHelp()
 end
 

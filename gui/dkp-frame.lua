@@ -1,7 +1,7 @@
 --[[-----------------------------------------------------------------------------
 Frame Container
 -------------------------------------------------------------------------------]]
-local Type, Version = "DKPFrame", 1
+local Type, Version = "DKPFrame", 2
 local AceGUI = LibStub and LibStub("AceGUI-3.0", true)
 if not AceGUI or (AceGUI:GetWidgetVersion(Type) or 0) >= Version then return end
 
@@ -131,6 +131,10 @@ local methods = {
 		self.statustext:SetText(text)
 	end,
 
+	["SetItemText"] = function(self, text)
+		self.itemtext:SetText(text)
+	end,
+
 	["Hide"] = function(self)
 		self.frame:Hide()
 	end,
@@ -229,7 +233,7 @@ local function Constructor()
 	statustext:SetPoint("TOPLEFT", 7, -2)
 	statustext:SetPoint("BOTTOMRIGHT", -7, 2)
 	statustext:SetHeight(20)
-	statustext:SetJustifyH("LEFT")
+	statustext:SetJustifyH("CENTER")
 	statustext:SetText("")
 
 	local titlebg = frame:CreateTexture(nil, "OVERLAY")
@@ -311,6 +315,7 @@ local function Constructor()
 		localstatus = {},
 		titletext   = titletext,
 		statustext  = statustext,
+		itemtext 	= itemtext,
 		titlebg     = titlebg,
 		sizer_se    = sizer_se,
 		sizer_s     = sizer_s,
