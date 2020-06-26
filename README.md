@@ -51,7 +51,9 @@ though. I am thinking of a better way to create patterns.
 
 ### Bid Button
 
-The addon comes with a Bid button. When bidding is open one can use it to bid for the current item. It sends a chat message to /raid, /party or /say, depending the current status of the player. The sent message can be controlled in the AddOns settings.
+The addon comes with a Bid button. When bidding is open one can use it to bid for the current
+item. It sends a chat message to /raid, /party or /say, depending the current status of the
+player. The sent message can be controlled in the AddOns settings.
 
 ### My DKP Status
 
