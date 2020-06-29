@@ -525,7 +525,7 @@ function DKPBidView:PlaceBid()
 		channel = "PARTY"
 	end
 
-	if UnitInRaid("player") == 1 then
+	if UnitInRaid("player") then
 		channel = "RAID"
 	end
 
