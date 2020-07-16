@@ -488,6 +488,14 @@ function DKPBidView:StartBidding(item)
 	DKPWin.frame:SetCallback("OnBid", function(widget)
 		self:PlaceBid()
 	end)
+
+	DKPWin.frame:SetCallback("OnShowItemTooltip", function(widget)
+		self:ShowItemTooltip(item)
+	end)
+
+	DKPWin.frame:SetCallback("OnHideItemTooltip", function(widget)
+		self:HideItemTooltip()
+	end)
 end
 
 function DKPBidView:EndBidding()
@@ -516,6 +524,19 @@ function DKPBidView:AcceptBid(player, bid)
 
 	self.currentBidders[player] = bid
 	DKPWin:RefreshBidders(self.currentBidders)
+end
+
+function DKPBidView:ShowItemTooltip(item)
+	if item == nil then
+		return
+	end
+	GameTooltip_SetDefaultAnchor(GameTooltip, UIParent)
+	GameTooltip:SetHyperlink(item)
+	GameTooltip:Show()
+end
+
+function DKPBidView:HideItemTooltip()
+	GameTooltip:Hide()
 end
 
 function DKPBidView:PlaceBid()

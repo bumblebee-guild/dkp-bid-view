@@ -42,6 +42,14 @@ local function Frame_OnMouseDown(frame)
 	AceGUI:ClearFocus()
 end
 
+local function Title_OnEnter(frame)
+	frame.obj:Fire("OnShowItemTooltip")
+end
+
+local function Title_OnLeave(frame)
+	frame.obj:Fire("OnHideItemTooltip")
+end
+
 local function Title_OnMouseDown(frame)
 	frame:GetParent():StartMoving()
 	AceGUI:ClearFocus()
@@ -124,7 +132,7 @@ local methods = {
 
 	["SetTitle"] = function(self, title)
 		self.titletext:SetText(title)
-		self.titlebg:SetWidth((self.titletext:GetWidth() or 0) + 10)
+		self.titlebg:SetWidth((self.titletext:GetWidth() or 0))
 	end,
 
 	["SetStatusText"] = function(self, text)
@@ -247,6 +255,8 @@ local function Constructor()
 	title:EnableMouse(true)
 	title:SetScript("OnMouseDown", Title_OnMouseDown)
 	title:SetScript("OnMouseUp", MoverSizer_OnMouseUp)
+	title:SetScript("OnEnter", Title_OnEnter)
+	title:SetScript("OnLeave", Title_OnLeave)
 	title:SetAllPoints(titlebg)
 
 	local titletext = title:CreateFontString(nil, "OVERLAY", "GameFontNormal")
@@ -256,14 +266,14 @@ local function Constructor()
 	titlebg_l:SetTexture(131080) -- Interface\\DialogFrame\\UI-DialogBox-Header
 	titlebg_l:SetTexCoord(0.21, 0.31, 0, 0.63)
 	titlebg_l:SetPoint("RIGHT", titlebg, "LEFT")
-	titlebg_l:SetWidth(30)
+	titlebg_l:SetWidth(10)
 	titlebg_l:SetHeight(40)
 
 	local titlebg_r = frame:CreateTexture(nil, "OVERLAY")
 	titlebg_r:SetTexture(131080) -- Interface\\DialogFrame\\UI-DialogBox-Header
 	titlebg_r:SetTexCoord(0.67, 0.77, 0, 0.63)
 	titlebg_r:SetPoint("LEFT", titlebg, "RIGHT")
-	titlebg_r:SetWidth(30)
+	titlebg_r:SetWidth(10)
 	titlebg_r:SetHeight(40)
 
 	local sizer_se = CreateFrame("Frame", nil, frame)
@@ -331,6 +341,7 @@ local function Constructor()
 	bidbutton.obj = widget
 	closebutton.obj = widget
 	statusbg.obj = widget
+	title.obj = widget
 
 	return AceGUI:RegisterAsContainer(widget)
 end
