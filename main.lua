@@ -91,8 +91,8 @@ local DKPWin = {
 		local dkpToBidder = {}
 		local order = {}
 
-		for player, bid in pairs(currentBidders) do
-			local ibid = tonumber(bid)
+		for player, playerInfo in pairs(currentBidders) do
+			local ibid = tonumber(playerInfo.bid)
 			if ibid ~= nil then
 				if dkpToBidder[ibid] == nil then
 					dkpToBidder[ibid] = {}
@@ -108,8 +108,20 @@ local DKPWin = {
 		for i=#order,1,-1 do
 			local bid = order[i]
 			for player, t in pairs(dkpToBidder[bid]) do
+				local playerInfo = currentBidders[player]
 				local l = AceGUI:Create("DKPRow")
-				l:SetText(player)
+
+				local playerText = player
+				if playerInfo.totalDKP ~= nil then
+					playerText = playerText .. " (" .. playerInfo.totalDKP .. ")"
+				end
+				l:SetText(playerText)
+
+				if playerInfo.class ~= nil then
+					local r, g, b, _ = GetClassColor(playerInfo.class)
+					l:SetColor(r, g, b)
+				end
+
 				l:SetNumber(string.format("%s", bid))
 				self.frame:AddChild(l)
 			end
@@ -213,7 +225,7 @@ function DKPBidView:GetOptions()
 				}
 			},
 			dkpExtract = {
-				name = "My DKP",
+				name = "DKP Extract",
 				desc = "Configuration for obtaining player's DKP.",
 				type = "group",
 				order = 2,
@@ -221,8 +233,10 @@ function DKPBidView:GetOptions()
 					explanation = {
 						type = "description",
 						order = 0,
-						name = "This section controls how your DKP is shown on the " ..
-							"bidding window status bar. Currently the only supported " ..
+						name = "This section controls how current DKP balance is " ..
+							"extracted. It is shownon the bidding window status bar " ..
+							"for the player and in brackets after player names when " ..
+							"they are bidding. Currently the only supported " ..
 							"way of acquiring the DKP is from the your guild's " ..
 							"officer note.",
 					},
@@ -236,7 +250,22 @@ function DKPBidView:GetOptions()
 						set = function(info, val) self.db.profile.dkpExtract.officerNoteRExp = val end,
 						get = function(info) return self.db.profile.dkpExtract.officerNoteRExp end,
 						multiline = 2,
-					}
+					},
+					showCharTotalDKP = {
+						name = "Show Bidders' Total DKP",
+						desc = "Show the current amount of DKP a bidder has. " ..
+							"It will be displayed next to their name in parentheses " ..
+							"during bidding. Works only for characters in the player's " ..
+							"guild.",
+						type = "toggle",
+						width = "full",
+						set = function(info,val)
+							self.db.profile.dkpExtract.showTotalDKP = val
+						end,
+						get = function(info)
+							return self.db.profile.dkpExtract.showTotalDKP
+						end,
+					},
 				},
 			},
 			chats = {
@@ -335,7 +364,7 @@ function DKPBidView:OnInitialize()
 	self.playerRealm = GetRealmName()
 	self.bidInProgress = false
 	self.currentBidders = {}
-	self.configAppName = "DKP Bid View"
+	self.configAppName = "DKP Bid View Configuration"
 
 	self.db = LibStub("AceDB-3.0"):New("DKPBidView", self:GetDBDefaults(), true)
 	self.opts = self:GetOptions()
@@ -371,6 +400,7 @@ function DKPBidView:GetDBDefaults()
 			},
 			dkpExtract = {
 				officerNoteRExp = OFFICER_NOTE_DKP_REGEXP,
+				showTotalDKP = false,
 			},
 			patterns = {
 				bidStartedRExp = BID_STARTED_REGEXP,
@@ -522,7 +552,21 @@ function DKPBidView:AcceptBid(player, bid)
 	-- Remove the realm if present in the player name.
 	player = string.gsub(player, "-" .. self.playerRealm, "")
 
-	self.currentBidders[player] = bid
+	local oldInfo = self.currentBidders[player]
+	if oldInfo == nil then
+		class, dkp = self:GetCharacterInfo(player)
+		oldInfo = {
+			bid = nil,
+			class = class,
+		}
+
+		if self.db.profile.dkpExtract.showTotalDKP then
+			oldInfo.totalDKP = dkp
+		end
+	end
+	oldInfo.bid = bid
+
+	self.currentBidders[player] = oldInfo
 	DKPWin:RefreshBidders(self.currentBidders)
 end
 
@@ -621,7 +665,7 @@ function DKPBidView:GetPlayerDKP()
 		return "not in guild"
 	end
 
-	total, online, mobile = GetNumGuildMembers()
+	total, online, _ = GetNumGuildMembers()
 	local notRegExp = self.db.profile.dkpExtract.officerNoteRExp
 
 	for i=1,total do
@@ -637,6 +681,27 @@ function DKPBidView:GetPlayerDKP()
 	end
 
 	return "unknown"
+end
+
+-- GetCharacterInfo returns information about a character - class and dkp.
+function DKPBidView:GetCharacterInfo(name)
+	local notRegExp = self.db.profile.dkpExtract.officerNoteRExp
+	local fullName = name .. '-' .. self.playerRealm
+	total, online, _ = GetNumGuildMembers()
+
+	for i=1,total do
+		local guildieName, _, _, _, _, _, _, officerNote, _, _, class, _, _, _, _,
+			_, memberGUID = GetGuildRosterInfo(i)
+		if guildieName == fullName then
+			local dkp = "unknown"
+			for net, total in officerNote:gmatch(notRegExp) do
+				dkp = net
+			end
+			return class, dkp
+		end
+	end
+
+	return nil, nil
 end
 
 -- ShowConfig opens the addon configuration window.
@@ -695,6 +760,12 @@ local function dkpbvCli(arg)
 			SendChatMessage(">>> Please no raid spam. Enter your bid for " .. itemLink .. ". Minimum BID is 40!", "SAY")
 			SendChatMessage("Ðezo-Ashbringer - Current bid: 80. OK!", "SAY")
 			SendChatMessage("Nightruner - Current bid: 120. OK!", "SAY")
+			SendChatMessage("Laurelinka - Current bid: 125. OK!", "SAY")
+			SendChatMessage("Twishk - Current bid: 130. OK!", "SAY")
+			SendChatMessage("Alyf - Current bid: 135. OK!", "SAY")
+			SendChatMessage("Prometheuss - Current bid: 140. OK!", "SAY")
+			SendChatMessage("Ollowyn - Current bid: 150. OK!", "SAY")
+			SendChatMessage("Cretina - Current bid: 650. OK!", "SAY")
 			SendChatMessage("Arcticus - NOT OK! You need at least 20 DKP to place a bid. You have 5.", "SAY")
 		end)
 		return

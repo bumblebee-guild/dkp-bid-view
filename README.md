@@ -77,7 +77,5 @@ be much more stable.
 
 [ ] Indicate when the player is winning the bid
 
-[ ] Player names in class colors
-
 [ ] Configure a wish list of items and ignore all else
 
