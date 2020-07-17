@@ -531,12 +531,23 @@ function DKPBidView:ShowItemTooltip(item)
 		return
 	end
 	GameTooltip_SetDefaultAnchor(GameTooltip, UIParent)
+	self:AnchroTooltipToMouse(GameTooltip)
 	GameTooltip:SetHyperlink(item)
 	GameTooltip:Show()
 end
 
 function DKPBidView:HideItemTooltip()
 	GameTooltip:Hide()
+end
+
+function DKPBidView:AnchroTooltipToMouse(tooltip)
+	tooltip:SetOwner(UIParent, "ANCHOR_CURSOR")
+	local x, y = GetCursorPosition()
+	local effScale = tooltip:GetEffectiveScale()
+	tooltip:ClearAllPoints()
+	tooltip:SetPoint("BOTTOM", UIParent, "BOTTOMLEFT", (x / effScale), (y / effScale))
+	tooltip.default = 1
+	GameTooltip_UpdateStyle(tooltip)
 end
 
 function DKPBidView:PlaceBid()
