@@ -238,7 +238,8 @@ function DKPBidView:GetOptions()
 							"for the player and in brackets after player names when " ..
 							"they are bidding. Currently the only supported " ..
 							"way of acquiring the DKP is from the your guild's " ..
-							"officer note.",
+							"officer note. This regular Lua expression is applied " ..
+							"to each character's note in order to obtain its DKP.",
 					},
 					dkpOfficerNote = {
 						name = "DKP From Officer Note",
@@ -352,6 +353,30 @@ function DKPBidView:GetOptions()
 					},
 				},
 			},
+			positioning = {
+				name = "Positioning",
+				desc = "Allows controlling the position of the bid window.",
+				type = "group",
+				order = 4,
+				args = {
+					explanation = {
+						type = "description",
+						order = 0,
+						name = "By showing the bid window you can move it around and " ..
+							"reisize it. Once it is on the dsired position you can " ..
+							"close it and it will remember its position.",
+					},
+					showButton = {
+						type = "execute",
+						order = 1,
+						name = "Show",
+						desc = "Show the bid window.",
+						func = function()
+							DKPBidView:StartBidding(nil)
+						end
+					},
+				},
+			},
 		},
 	}
 
@@ -364,7 +389,7 @@ function DKPBidView:OnInitialize()
 	self.playerRealm = GetRealmName()
 	self.bidInProgress = false
 	self.currentBidders = {}
-	self.configAppName = "DKP Bid View Configuration"
+	self.configAppName = "DKP Bid View"
 
 	self.db = LibStub("AceDB-3.0"):New("DKPBidView", self:GetDBDefaults(), true)
 	self.opts = self:GetOptions()
